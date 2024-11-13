@@ -1,6 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # Для 3D графиков
+import numpy as np
 
 
 # Целевая функция

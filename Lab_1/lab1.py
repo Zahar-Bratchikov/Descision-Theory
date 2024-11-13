@@ -1,7 +1,6 @@
 import math
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize_scalar
+import numpy as np
 
 # Задаем параметры точности и интервала поиска
 tolerance = 1e-6
