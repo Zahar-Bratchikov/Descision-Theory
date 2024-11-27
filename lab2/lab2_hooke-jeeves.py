@@ -9,10 +9,10 @@ def f(x):
 
 
 # Метод Хука-Дживса с оптимизациями
-def hooke_jeeves_optimized(f, x0, delta=0.01, epsilon=1e-6, alpha=1):
+def hooke_jeeves(f, x0, lambd=0.1, epsilon=1e-6, alpha=1):
     x = np.array(x0, dtype=float)
     n = len(x)
-    step = np.array([delta] * n)  # Шаг по каждому направлению
+    step = np.array([lambd] * n)  # Шаг по каждому направлению
     iteration = 0  # Счетчик итераций
 
     while max(step) > epsilon:
@@ -72,7 +72,7 @@ def plot_function_and_min(f, x_min, x_range=(-5, 5), y_range=(-5, 5)):
 x0 = [2, 1]
 
 # Запуск метода
-min_point, min_value, iterations = hooke_jeeves_optimized(f, x0)
+min_point, min_value, iterations = hooke_jeeves(f, x0)
 
 # Вывод результатов
 print("Минимум найден в точке:", min_point)
