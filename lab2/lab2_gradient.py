@@ -8,12 +8,14 @@ def f(x):
     x1, x2 = x
     return x1**2 - 3 * x1 * x2 + 10 * x2**2 + 5 * x1 - 3 * x2
 
+
 # Градиент целевой функции
 def grad_f(x):
     x1, x2 = x
     df_dx1 = 2 * x1 - 3 * x2 + 5
     df_dx2 = -3 * x1 + 20 * x2 - 3
     return np.array([df_dx1, df_dx2])
+
 
 # Метод наискорейшего спуска с оптимальным шагом
 def steepest_descent(f, grad_f, x0, epsilon=1e-4):
@@ -38,6 +40,7 @@ def steepest_descent(f, grad_f, x0, epsilon=1e-4):
 
     return x, f(x), iter_count, trajectory
 
+
 # Функция для отрисовки 3D графика
 def plot_3d_trajectory(f, trajectory, x_range=(-5, 5), y_range=(-5, 5)):
     # Сетка точек
@@ -55,7 +58,8 @@ def plot_3d_trajectory(f, trajectory, x_range=(-5, 5), y_range=(-5, 5)):
 
     # Отображение траектории спуска
     trajectory = np.array(trajectory)
-    ax.plot(trajectory[:, 0], trajectory[:, 1], [f(point) for point in trajectory], color="red", marker="o", label="Траектория спуска")
+    ax.plot(trajectory[:, 0], trajectory[:, 1], [f(point) for point in trajectory], color="red", marker="o",
+            label="Траектория спуска")
     ax.scatter(trajectory[-1, 0], trajectory[-1, 1], f(trajectory[-1]), color="blue", s=100, label="Минимум")
 
     # Настройки графика
@@ -66,6 +70,7 @@ def plot_3d_trajectory(f, trajectory, x_range=(-5, 5), y_range=(-5, 5)):
     ax.legend()
 
     plt.show()
+
 
 # Начальная точка
 x0 = [2, 1]
