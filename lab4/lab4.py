@@ -54,7 +54,6 @@ def hooke_jeeves_penalty(phi, x0, lambd=0.5, epsilon=1e-6, alpha=1):
 def penalty_method(f, g, x0, initial_A_k=1, epsilon=1e-6):
     x_k = x0
     A_k = initial_A_k
-    trajectory = []
     phi_k_prev = float('inf')  # Для проверки условия остановки
     total_iterations = 0  # Общее количество итераций
 
@@ -62,7 +61,6 @@ def penalty_method(f, g, x0, initial_A_k=1, epsilon=1e-6):
         # Оборачиваем phi в функцию, фиксируя текущий A_k
         phi_with_penalty = lambda x: phi(x, A_k)
         x_k, phi_k, iterations, path = hooke_jeeves_penalty(phi_with_penalty, x_k, epsilon=epsilon)
-        trajectory.extend(path)
         total_iterations += iterations  # Суммируем внутренние итерации
 
         # Условие остановки
@@ -72,10 +70,10 @@ def penalty_method(f, g, x0, initial_A_k=1, epsilon=1e-6):
         phi_k_prev = phi_k
         A_k *= 10  # Увеличиваем штрафной коэффициент
 
-    return x_k, f(x_k), A_k, trajectory, total_iterations
+    return x_k, f(x_k), A_k, total_iterations
 
-# Функция для отрисовки 3D графика с траекторией и ограничением
-def plot_function_with_constraint(f, g, x_min, trajectory, x_range=(-5, 5), y_range=(-5, 5)):
+# Функция для отрисовки 3D графика с точкой минимума
+def plot_function_with_constraint(f, g, x_min, x_range=(-5, 5), y_range=(-5, 5)):
     # Сетка точек
     x1 = np.linspace(x_range[0], x_range[1], 400)
     x2 = np.linspace(y_range[0], y_range[1], 400)
@@ -95,15 +93,10 @@ def plot_function_with_constraint(f, g, x_min, trajectory, x_range=(-5, 5), y_ra
     # Плоскость ограничения
     ax.plot_surface(X1, X2, constraint_Z, color="orange", alpha=0.5, label="Ограничение")
 
-    # Траектория оптимизации
-    trajectory = np.array(trajectory)
-    z_values = np.array([f(point) for point in trajectory])
-    ax.plot(trajectory[:, 0], trajectory[:, 1], z_values, color="red", marker='o', label="Траектория")
-
     # Точка минимума
     ax.scatter(x_min[0], x_min[1], f(x_min), color="blue", s=100, label="Минимум")
 
-    ax.set_title("3D график функции с ограничением и траекторией")
+    ax.set_title("3D график функции с ограничением")
     ax.set_xlabel("$x_1$")
     ax.set_ylabel("$x_2$")
     ax.set_zlabel("$f(x)$")
@@ -114,7 +107,7 @@ def plot_function_with_constraint(f, g, x_min, trajectory, x_range=(-5, 5), y_ra
 x0 = [2, -3]  # Начальная точка
 
 # Запуск метода
-min_point, min_value, final_A_k, trajectory, total_iterations = penalty_method(f, g, x0)
+min_point, min_value, final_A_k, total_iterations = penalty_method(f, g, x0)
 
 # Вывод результатов
 print("Минимум найден в точке:", min_point)
@@ -123,4 +116,4 @@ print("Штрафной коэффициент A_k:", final_A_k)
 print("Общее количество итераций:", total_iterations)
 
 # Построение 3D графика
-plot_function_with_constraint(f, g, min_point, trajectory)
+plot_function_with_constraint(f, g, min_point)
