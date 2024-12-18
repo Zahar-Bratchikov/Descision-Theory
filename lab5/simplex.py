@@ -8,6 +8,12 @@ def simplex_method(c, A, b):
             if i != row:
                 table[i] -= table[i, col] * table[row]
 
+    def print_table(table, iteration):
+        """ Печать текущей симплекс-таблицы с округлением до 2 знаков """
+        rounded_table = np.round(table, 2)
+        print(f"\nИтерация {iteration}:")
+        print(rounded_table)
+
     num_vars = len(c)  # Количество переменных
     num_constraints = len(b)  # Количество ограничений
 
@@ -23,8 +29,12 @@ def simplex_method(c, A, b):
     # Заполнение целевой функции
     table[-1, :num_vars] = -np.array(c)
 
-    # Симплекс-метод итераций
+    # Итерации симплекс-метода
+    iteration = 0
+    print_table(table, iteration)
     while np.any(table[-1, :-1] < 0):  # Пока есть отрицательные коэффициенты в целевой функции
+        iteration += 1
+
         # Ведущий столбец (наименьший элемент в последней строке)
         col = np.argmin(table[-1, :-1])
 
@@ -39,6 +49,9 @@ def simplex_method(c, A, b):
 
         # Выполнение пивотирования
         pivot(table, row, col)
+
+        # Вывод текущей таблицы
+        print_table(table, iteration)
 
     # Извлечение решения
     solution = np.zeros(num_vars)
@@ -63,7 +76,7 @@ b = [6, -3, 3, 5]  # Правая часть ограничений
 # Решение задачи
 try:
     solution, max_value = simplex_method(c, A, b)
-    print("Оптимальное решение:", solution)
-    print("Максимальное значение целевой функции:", max_value)
+    print("\nОптимальное решение:", np.round(solution, 2))
+    print("Максимальное значение целевой функции:", round(max_value, 2))
 except ValueError as e:
     print("Ошибка:", e)
