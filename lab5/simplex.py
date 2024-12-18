@@ -1,82 +1,94 @@
 import numpy as np
 
 def simplex_method(c, A, b):
-    def pivot(table, row, col):
-        """ Пивотирование: обновление симплекс-таблицы """
-        table[row] /= table[row, col]
-        for i in range(len(table)):
-            if i != row:
-                table[i] -= table[i, col] * table[row]
+    """
+    Симплекс-метод для задачи максимизации с отладочными выводами.
+    """
+    # Приведение к канонической форме
+    m, n = A.shape
+    tableau = np.zeros((m + 1, n + m + 1))
+    tableau[:-1, :-1] = np.hstack((A, np.eye(m)))  # Добавляем базисные переменные
+    tableau[:-1, -1] = b  # Правая часть ограничений
+    tableau[-1, :-1] = np.hstack((-c, np.zeros(m)))  # Коэффициенты целевой функции
+    basis = list(range(n, n + m))  # Индексы базисных переменных
 
-    def print_table(table, iteration):
-        """ Печать текущей симплекс-таблицы с округлением до 2 знаков """
-        rounded_table = np.round(table, 2)
-        print(f"\nИтерация {iteration}:")
-        print(rounded_table)
+    print("Начальная симплекс-таблица:")
+    print(tableau)
 
-    num_vars = len(c)  # Количество переменных
-    num_constraints = len(b)  # Количество ограничений
+    while True:
+        # Шаг 4: Проверка оптимальности
+        if np.all(tableau[-1, :-1] <= 0):  # Все оценки σn ≤ 0
+            print("Решение оптимально.")
+            break
 
-    # Инициализация симплекс-таблицы
-    table = np.zeros((num_constraints + 1, num_vars + num_constraints + 1))
+        # Шаг 5: Выбор разрешающего столбца
+        pivot_col = np.argmax(tableau[-1, :-1])  # Максимальный элемент в последней строке
+        if tableau[-1, pivot_col] <= 0:
+            print("Решение оптимально.")
+            break
 
-    # Заполнение ограничений
-    for i in range(num_constraints):
-        table[i, :num_vars] = A[i]
-        table[i, num_vars + i] = 1  # Базисные переменные
-        table[i, -1] = b[i]
+        # Шаг 6: Проверка неограниченности
+        if np.all(tableau[:-1, pivot_col] <= 0):
+            raise Exception("Целевая функция неограничена.")
 
-    # Заполнение целевой функции
-    table[-1, :num_vars] = -np.array(c)
+        # Шаг 7: Выбор разрешающей строки
+        ratios = [
+            tableau[i, -1] / tableau[i, pivot_col]
+            if tableau[i, pivot_col] > 0 else np.inf
+            for i in range(m)
+        ]
+        pivot_row = np.argmin(ratios)
 
-    # Итерации симплекс-метода
-    iteration = 0
-    print_table(table, iteration)
-    while np.any(table[-1, :-1] < 0):  # Пока есть отрицательные коэффициенты в целевой функции
-        iteration += 1
+        print(f"Разрешающий элемент: строка {pivot_row}, столбец {pivot_col}")
+        print(f"До пересчета таблицы:")
+        print(tableau)
 
-        # Ведущий столбец (наименьший элемент в последней строке)
-        col = np.argmin(table[-1, :-1])
+        # Шаг 8: Пересчет таблицы
+        pivot_element = tableau[pivot_row, pivot_col]
+        tableau[pivot_row, :] /= pivot_element
+        for i in range(m + 1):
+            if i != pivot_row:
+                tableau[i, :] -= tableau[i, pivot_col] * tableau[pivot_row, :]
 
-        # Проверка на неограниченность целевой функции
-        if all(table[:-1, col] <= 0):
-            raise ValueError("Целевая функция не ограничена!")
+        print(f"После пересчета таблицы:")
+        print(tableau)
 
-        # Ведущая строка (минимальное положительное отношение)
-        ratios = np.divide(table[:-1, -1], table[:-1, col], where=table[:-1, col] > 0)
-        ratios[table[:-1, col] <= 0] = np.inf  # Игнорируем некорректные строки
-        row = np.argmin(ratios)
+        # Обновление базиса
+        basis[pivot_row] = pivot_col
 
-        # Выполнение пивотирования
-        pivot(table, row, col)
+    # Извлечение результата
+    solution = np.zeros(n)
+    for i, col in enumerate(basis):
+        if col < n:
+            solution[col] = tableau[i, -1]
 
-        # Вывод текущей таблицы
-        print_table(table, iteration)
+    return solution, -tableau[-1, -1]  # Максимальная целевая функция
 
-    # Извлечение решения
-    solution = np.zeros(num_vars)
-    for i in range(num_constraints):
-        basic_var = np.where(table[i, :num_vars] == 1)[0]
-        if len(basic_var) == 1:
-            solution[basic_var[0]] = table[i, -1]
+# Исходные данные
+c = np.array([2, 2], dtype=float)  # Коэффициенты целевой функции
+A = np.array([
+    [-3, 2],  # -3x1 + 2x2 <= 6
+    [-1, -1],  # -x1 - x2 <= -3
+    [1, 0],  # x1 <= 3
+    [0, 1]  # x2 <= 5
+], dtype=float)
+b = np.array([6, -3, 3, 5], dtype=float)  # Правая часть ограничений
 
-    # Оптимальное значение целевой функции
-    return solution, table[-1, -1]
+# Приведение ограничений к стандартной форме (все b >= 0)
+for i in range(len(b)):
+    if b[i] < 0:
+        A[i, :] *= -1
+        b[i] *= -1
 
-# Данные задачи
-c = [2, 2]  # Целевая функция: F = 2x1 + 2x2
-A = [
-    [-3, 2],  # 3x1 - 2x2 <= 6
-    [-1, -1],  # x1 + x2 >= 3 -> -x1 - x2 <= -3
-    [1, 0],   # x1 <= 3
-    [0, 1]    # x2 <= 5
-]
-b = [6, -3, 3, 5]  # Правая часть ограничений
+print("Матрица ограничений (A):")
+print(A)
+print("Вектор ограничений (b):")
+print(b)
 
-# Решение задачи
-try:
-    solution, max_value = simplex_method(c, A, b)
-    print("\nОптимальное решение:", np.round(solution, 2))
-    print("Максимальное значение целевой функции:", round(max_value, 2))
-except ValueError as e:
-    print("Ошибка:", e)
+# Решение
+solution, max_value = simplex_method(c, A, b)
+
+# Вывод результатов
+print("\nОптимальное решение:")
+print(f"x1 = {solution[0]:.2f}, x2 = {solution[1]:.2f}")
+print(f"Максимальное значение целевой функции: F = {max_value:.2f}")
