@@ -57,3 +57,4 @@ for row_idx, col_idx in basis_indices:
     if col_idx > 0:  # Пропускаем вывод для x0
         print(f"x{col_idx} = {current_table[row_idx][0]}")
 print(f"Оптимальное значение целевой функции F(x) = {current_table[0][0]}")
+
