@@ -52,6 +52,6 @@ def tangent_method(a, b, x0, epsilon=10 ** -6):
 a = -0.5
 b = 0.5
 x0 = 0  # выбрал случайно, можешь поменять сама, комментарий потом удалить
-epsilon = 10 ** -5
+epsilon = 10 ** -4
 result, steps = tangent_method(a, b, x0, epsilon)
 print(f"Минимум функции: {result}, число итераций: {steps}")
