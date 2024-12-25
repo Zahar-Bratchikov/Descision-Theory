@@ -1,151 +1,162 @@
-class Cell:
+class BasisCell:
     def __init__(self, row, col):
-        self.row = row
-        self.col = col
+        self.row = row  # Номер строки ячейки
+        self.col = col  # Номер столбца ячейки
 
 
-class State:
-    def __init__(self, cell, prev_dir, next_cells):
-        self.cell = cell
-        self.prev_dir = prev_dir
-        self.next_cells = next_cells
+class LoopState:
+    def __init__(self, cell, previous_direction, next_cells):
+        self.cell = cell  # Текущая ячейка в цикле
+        self.previous_direction = previous_direction  # Направление, из которого пришли в эту ячейку
+        self.next_cells = next_cells  # Список доступных соседних ячеек
 
 
-def solve(a, b, matrix):  # a: supplies, b: demands, matrix: cost matrix
-    assert len(matrix) == len(a)
-    assert len(matrix[0]) == len(b)
+def solve_transportation(supplies, demands, cost_matrix):
+    # Основная функция для решения транспортной задачи
+    assert len(cost_matrix) == len(supplies)
+    assert len(cost_matrix[0]) == len(demands)
 
-    # Step 1: Balance the problem
-    a_sum = sum(a)
-    b_sum = sum(b)
-    if a_sum > b_sum:
-        b.append(a_sum - b_sum)
-        for row in matrix:
-            row.append(0)
-    elif a_sum < b_sum:
-        a.append(b_sum - a_sum)
-        matrix.append([0] * len(b))
+    # Шаг 1: Балансировка задачи
+    total_supply = sum(supplies)  # Общий объём поставок
+    total_demand = sum(demands)  # Общий объём потребностей
+    if total_supply > total_demand:
+        demands.append(total_supply - total_demand)  # Добавление фиктивного потребителя
+        for row in cost_matrix:
+            row.append(0)  # Стоимость доставки к фиктивному потребителю равна 0
+    elif total_supply < total_demand:
+        supplies.append(total_demand - total_supply)  # Добавление фиктивного поставщика
+        cost_matrix.append([0] * len(demands))  # Стоимость доставки от фиктивного поставщика равна 0
 
-    # Step 2: Find the initial feasible solution using the North-West Corner Rule
-    x = [[0] * len(b) for _ in range(len(a))]
-    a_copy = a[:]
-    b_copy = b[:]
-    indexes_for_baza = []
+    # Шаг 2: Построение начального плана методом северо-западного угла
+    allocation = [[0] * len(demands) for _ in range(len(supplies))]  # Таблица распределения
+    remaining_supplies = supplies[:]  # Оставшиеся поставки
+    remaining_demands = demands[:]  # Оставшиеся потребности
+    basis_cells = []  # Базисные ячейки
+
     i, j = 0, 0
-    while i < len(a) and j < len(b):
-        if a_copy[i] < b_copy[j]:
-            x[i][j] = a_copy[i]
-            indexes_for_baza.append(Cell(i, j))
-            b_copy[j] -= a_copy[i]
-            a_copy[i] = 0
-            i += 1
+    while i < len(supplies) and j < len(demands):
+        # Заполняем ячейку минимально возможным значением
+        if remaining_supplies[i] < remaining_demands[j]:
+            allocation[i][j] = remaining_supplies[i]
+            basis_cells.append(BasisCell(i, j))
+            remaining_demands[j] -= remaining_supplies[i]
+            remaining_supplies[i] = 0
+            i += 1  # Переход к следующему поставщику
         else:
-            x[i][j] = b_copy[j]
-            indexes_for_baza.append(Cell(i, j))
-            a_copy[i] -= b_copy[j]
-            b_copy[j] = 0
-            j += 1
+            allocation[i][j] = remaining_demands[j]
+            basis_cells.append(BasisCell(i, j))
+            remaining_supplies[i] -= remaining_demands[j]
+            remaining_demands[j] = 0
+            j += 1  # Переход к следующему потребителю
 
-    # Calculate initial cost
-    result = sum(x[cell.row][cell.col] * matrix[cell.row][cell.col] for cell in indexes_for_baza)
-    print(f"Initial Cost (F(0)) = {result}")
+    # Вычисление стоимости начального плана
+    initial_cost = sum(allocation[cell.row][cell.col] * cost_matrix[cell.row][cell.col] for cell in basis_cells)
+    print(f"Начальная стоимость = {initial_cost}")
 
-    # Step 3: Optimize using the Potential Method
-    potential_method(a, b, x, matrix, indexes_for_baza)
+    # Шаг 3: Оптимизация методом потенциалов
+    optimize_potential_method(supplies, demands, allocation, cost_matrix, basis_cells)
 
 
-def potential_method(a, b, x, costs, indexes_for_baza):
-    m, n = len(a), len(b)
+def optimize_potential_method(supplies, demands, allocation, costs, basis_cells):
+    # Метод потенциалов для оптимизации решения
+    num_suppliers, num_consumers = len(supplies), len(demands)
     while True:
-        indexes_for_baza.sort(key=lambda cell: (cell.row, cell.col))
+        # Сортируем базисные ячейки для корректной обработки
+        basis_cells.sort(key=lambda cell: (cell.row, cell.col))
 
-        # Calculate potentials (u and v)
-        u = [None] * m
-        v = [None] * n
-        u[0] = 0  # Start with the first potential
-        while any(p is None for p in u + v):
-            for cell in indexes_for_baza:
+        # Вычисляем потенциалы (u для строк и v для столбцов)
+        potentials_u = [None] * num_suppliers
+        potentials_v = [None] * num_consumers
+        potentials_u[0] = 0  # Начинаем с первой строки
+
+        while any(p is None for p in potentials_u + potentials_v):
+            for cell in basis_cells:
                 i, j = cell.row, cell.col
-                if u[i] is not None and v[j] is None:
-                    v[j] = costs[i][j] - u[i]
-                elif v[j] is not None and u[i] is None:
-                    u[i] = costs[i][j] - v[j]
+                if potentials_u[i] is not None and potentials_v[j] is None:
+                    potentials_v[j] = costs[i][j] - potentials_u[i]  # Рассчитываем потенциал столбца
+                elif potentials_v[j] is not None and potentials_u[i] is None:
+                    potentials_u[i] = costs[i][j] - potentials_v[j]  # Рассчитываем потенциал строки
 
-        # Find non-basis cells with negative reduced costs
-        not_optimal_cells = []
-        economies = []
-        for i in range(m):
-            for j in range(n):
-                if all(cell.row != i or cell.col != j for cell in indexes_for_baza):
-                    diff = u[i] + v[j] - costs[i][j]
-                    if diff > 0:
-                        not_optimal_cells.append(Cell(i, j))
-                        economies.append(diff)
+        # Поиск внебазисных ячеек с отрицательной оценкой
+        non_basis_cells = []
+        reduced_costs = []
 
-        if not not_optimal_cells:
-            print("Optimal solution found.")
+        for i in range(num_suppliers):
+            for j in range(num_consumers):
+                if all(cell.row != i or cell.col != j for cell in basis_cells):
+                    reduced_cost = potentials_u[i] + potentials_v[j] - costs[i][j]
+                    if reduced_cost > 0:  # Выбираем ячейки с положительной оценкой
+                        non_basis_cells.append(BasisCell(i, j))
+                        reduced_costs.append(reduced_cost)
+
+        if not non_basis_cells:
+            # Если нет подходящих ячеек, решение оптимально
+            print("Найдено оптимальное решение.")
             break
 
-        # Choose cell with maximum economy
-        max_economy = max(economies)
-        min_cost_cell = next(cell for cell, economy in zip(not_optimal_cells, economies) if economy == max_economy)
-        indexes_for_baza.append(min_cost_cell)
+        # Выбираем ячейку с максимальной оценкой
+        max_reduced_cost = max(reduced_costs)
+        entering_cell = next(cell for cell, cost in zip(non_basis_cells, reduced_costs) if cost == max_reduced_cost)
+        basis_cells.append(entering_cell)
 
-        # Create a closed loop and update x
-        path = build_path(min_cost_cell, indexes_for_baza)
-        minus_cells = path[1::2]
-        min_x_value = min(x[cell.row][cell.col] for cell in minus_cells)
+        # Строим замкнутый цикл и обновляем распределения
+        loop_path = construct_closed_loop(entering_cell, basis_cells)
+        minus_cells = loop_path[1::2]  # Ячейки, из которых вычитаем
+        min_allocation = min(allocation[cell.row][cell.col] for cell in minus_cells)
 
-        for idx, cell in enumerate(path):
+        for idx, cell in enumerate(loop_path):
             if idx % 2 == 0:
-                x[cell.row][cell.col] += min_x_value
+                allocation[cell.row][cell.col] += min_allocation  # Прибавляем к чётным ячейкам
             else:
-                x[cell.row][cell.col] -= min_x_value
+                allocation[cell.row][cell.col] -= min_allocation  # Вычитаем из нечётных ячеек
 
-        # Remove zero allocations from basis
+        # Удаляем нулевые распределения из базиса
         for cell in minus_cells:
-            if x[cell.row][cell.col] == 0:
-                indexes_for_baza.remove(cell)
+            if allocation[cell.row][cell.col] == 0:
+                basis_cells.remove(cell)
 
-    result = sum(x[cell.row][cell.col] * costs[cell.row][cell.col] for cell in indexes_for_baza)
-    print(f"Optimal Cost (Fmin) = {result}")
+    # Вычисляем оптимальную стоимость
+    optimal_cost = sum(allocation[cell.row][cell.col] * costs[cell.row][cell.col] for cell in basis_cells)
+    print(f"Оптимальная стоимость = {optimal_cost}")
 
 
-def build_path(start_cell, baza_cells):
-    stack = [State(start_cell, 'v',
-                   [cell for cell in baza_cells if cell.row == start_cell.row and cell.col != start_cell.col])]
+def construct_closed_loop(start_cell, basis_cells):
+    # Построение замкнутого цикла для пересчёта распределений
+    stack = [LoopState(start_cell, 'vertical',
+                       [cell for cell in basis_cells if cell.row == start_cell.row and cell.col != start_cell.col])]
 
     while stack:
         head = stack[-1]
 
         if len(stack) >= 4 and ((head.cell.row == start_cell.row) or (head.cell.col == start_cell.col)):
+            # Если цикл замкнулся, выходим
             break
 
         if not head.next_cells:
-            stack.pop()
+            stack.pop()  # Удаляем ячейку, если больше нет путей
             continue
 
         next_cell = head.next_cells.pop()
-        next_dir = 'h' if head.prev_dir == 'v' else 'v'
+        next_direction = 'horizontal' if head.previous_direction == 'vertical' else 'vertical'
         next_cells = [
-            cell for cell in baza_cells
-            if (cell.col == next_cell.col if next_dir == 'h' else cell.row == next_cell.row)
-               and (cell.row != next_cell.row if next_dir == 'h' else cell.col != next_cell.col)
+            cell for cell in basis_cells
+            if (cell.col == next_cell.col if next_direction == 'horizontal' else cell.row == next_cell.row)
+               and (cell.row != next_cell.row if next_direction == 'horizontal' else cell.col != next_cell.col)
         ]
 
-        stack.append(State(next_cell, next_dir, next_cells))
+        stack.append(LoopState(next_cell, next_direction, next_cells))
 
     return [state.cell for state in stack]
 
 
 if __name__ == "__main__":
-    a = [30, 20, 40, 50]
-    b = [35, 20, 55, 30]
-    costs = [
+    supplies = [30, 20, 40, 50]  # Запасы поставщиков
+    demands = [35, 20, 55, 30]  # Потребности потребителей
+    cost_matrix = [  # Матрица стоимости перевозки
         [2, 4, 1, 3],
         [5, 6, 5, 4],
         [3, 7, 9, 5],
         [1, 2, 2, 7]
     ]
 
-    solve(a, b, costs)
+    solve_transportation(supplies, demands, cost_matrix)
