@@ -13,21 +13,8 @@ class LoopState:
 
 def solve_transportation(supplies, demands, cost_matrix):
     # Основная функция для решения транспортной задачи
-    assert len(cost_matrix) == len(supplies)
-    assert len(cost_matrix[0]) == len(demands)
 
-    # Шаг 1: Балансировка задачи
-    total_supply = sum(supplies)  # Общий объём поставок
-    total_demand = sum(demands)  # Общий объём потребностей
-    if total_supply > total_demand:
-        demands.append(total_supply - total_demand)  # Добавление фиктивного потребителя
-        for row in cost_matrix:
-            row.append(0)  # Стоимость доставки к фиктивному потребителю равна 0
-    elif total_supply < total_demand:
-        supplies.append(total_demand - total_supply)  # Добавление фиктивного поставщика
-        cost_matrix.append([0] * len(demands))  # Стоимость доставки от фиктивного поставщика равна 0
-
-    # Шаг 2: Построение начального плана методом северо-западного угла
+    # Шаг 1: Построение начального плана методом северо-западного угла
     allocation = [[0] * len(demands) for _ in range(len(supplies))]  # Таблица распределения
     remaining_supplies = supplies[:]  # Оставшиеся поставки
     remaining_demands = demands[:]  # Оставшиеся потребности
@@ -53,7 +40,7 @@ def solve_transportation(supplies, demands, cost_matrix):
     initial_cost = sum(allocation[cell.row][cell.col] * cost_matrix[cell.row][cell.col] for cell in basis_cells)
     print(f"Начальная стоимость = {initial_cost}")
 
-    # Шаг 3: Оптимизация методом потенциалов
+    # Шаг 2: Оптимизация методом потенциалов
     optimize_potential_method(supplies, demands, allocation, cost_matrix, basis_cells)
 
 
@@ -118,7 +105,10 @@ def optimize_potential_method(supplies, demands, allocation, costs, basis_cells)
     # Вычисляем оптимальную стоимость
     optimal_cost = sum(allocation[cell.row][cell.col] * costs[cell.row][cell.col] for cell in basis_cells)
     print(f"Оптимальная стоимость = {optimal_cost}")
-
+    # Вывод финального плана перевозок
+    print("Финальный план перевозок:")
+    for row in allocation:
+        print("\t".join(f"{value:5}" for value in row))
 
 def construct_closed_loop(start_cell, basis_cells):
     # Построение замкнутого цикла для пересчёта распределений
